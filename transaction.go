@@ -325,9 +325,11 @@ func NewTransaction(instructions []Instruction, recentBlockHash Hash, opts ...Tr
 
 type privateKeyGetter func(key PublicKey) *PrivateKey
 
-func (tx *Transaction) MarshalBinary() ([]byte, error) {
-	if len(tx.Signatures) == 0 || len(tx.Signatures) != int(tx.Message.Header.NumRequiredSignatures) {
-		return nil, errors.New("signature verification failed")
+func (tx *Transaction) MarshalBinary(skipVerification bool) ([]byte, error) {
+	if skipVerification == false {
+		if len(tx.Signatures) == 0 || len(tx.Signatures) != int(tx.Message.Header.NumRequiredSignatures) {
+			return nil, errors.New("signature verification failed")
+		}
 	}
 
 	messageContent, err := tx.Message.MarshalBinary()
@@ -347,8 +349,8 @@ func (tx *Transaction) MarshalBinary() ([]byte, error) {
 	return output, nil
 }
 
-func (tx Transaction) MarshalWithEncoder(encoder *bin.Encoder) error {
-	out, err := tx.MarshalBinary()
+func (tx Transaction) MarshalWithEncoder(skipVerification bool, encoder *bin.Encoder) error {
+	out, err := tx.MarshalBinary(skipVerification)
 	if err != nil {
 		return err
 	}
@@ -381,8 +383,8 @@ func (tx *Transaction) UnmarshalWithDecoder(decoder *bin.Decoder) (err error) {
 	return nil
 }
 
-func (tx *Transaction) Sign(getter privateKeyGetter) (out []Signature, err error) {
-	messageContent, err := tx.Message.MarshalBinary()
+func (tx *Transaction) Sign(skipVerification bool, getter privateKeyGetter) (out []Signature, err error) {
+	messageContent, err := tx.Message.MarshalBinary(skipVerification)
 	if err != nil {
 		return nil, fmt.Errorf("unable to encode message for signing: %w", err)
 	}
@@ -421,8 +423,8 @@ func (tx *Transaction) String() string {
 	return buf.String()
 }
 
-func (tx Transaction) ToBase64() (string, error) {
-	out, err := tx.MarshalBinary()
+func (tx Transaction) ToBase64(skipVerification bool) (string, error) {
+	out, err := tx.MarshalBinary(skipVerification)
 	if err != nil {
 		return "", err
 	}
